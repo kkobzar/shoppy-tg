@@ -7,6 +7,7 @@ import {Telegraf, Markup} from 'telegraf'
 import 'dotenv/config';
 import store from 'store2'
 import fs from 'fs';
+import convertor from "./convertor.js";
 
 if (process.env.BOT_TOKEN === undefined) {
     throw new TypeError('BOT_TOKEN must be provided!')
@@ -69,6 +70,7 @@ function getProductArea(city = '', product = '',ctx=null){
     if (product.areas.length && menu.cities[store.get(ctx.chat.id).city]){
         for (let area of product.areas){
             let name = menu.cities[store.get(ctx.chat.id).city].districts.find(i=>i.key === area)
+            console.log(name)
             areasBtn.push([Markup.button.callback(name.title,name.key)])
         }
     }
@@ -80,6 +82,19 @@ function getProductArea(city = '', product = '',ctx=null){
         return false
     }
 }
+
+//---Get all districts
+
+let districts =[]
+
+for (let cty in menu.cities){
+    for (let dstrct in menu.cities[cty].districts){
+        //if (!districts.includes(menu.cities[cty].districts[dstrct].key)){
+            districts.push(menu.cities[cty].districts[dstrct])
+        //}
+    }
+}
+//console.log(districts)
 
 /*
 *
@@ -103,6 +118,15 @@ const cityMenu = Markup.inlineKeyboard(citiesMenuArr)
 
 function showCityMenu(ctx) {
     ctx.reply(`Hello, ${ctx.chat.id}! \nChoose your city:`,cityMenu)
+}
+
+function showProductMenu(ctx,mnu){
+    ctx.deleteMessage()
+    if (mnu){
+        ctx.reply('Выбирай:',Markup.inlineKeyboard(mnu))
+    }else {
+        ctx.reply('К сожалению в данном регионе нихуя нэма 😢', Markup.inlineKeyboard([homeBnt]))
+    }
 }
 
 /*
@@ -160,7 +184,7 @@ bot.start((ctx) => {
     showCityMenu(ctx)
 })
 
-bot.help((ctx) => ctx.reply('Contacts: @d33kei'))
+bot.help((ctx) => ctx.reply('( ͡° ͜ʖ ͡°)'))
 bot.on('message', (ctx) => ctx.telegram.sendMessage(ctx.message.chat.id, ctx.message))
 bot.action('delete', (ctx) => ctx.deleteMessage())
 
@@ -175,13 +199,8 @@ bot.action('main', (ctx) => {
 for (let cty in menu.cities){
     let menu = getMenu(cty)
     bot.action(cty,ctx=>{
-        ctx.deleteMessage()
         store(ctx.chat.id,{city:cty})
-        if (menu){
-            ctx.reply('Выбирай:',Markup.inlineKeyboard(menu))
-        }else {
-            ctx.reply('К сожалению в данном регионе нихуя нэма 😢', Markup.inlineKeyboard([homeBnt]))
-        }
+        showProductMenu(ctx,menu)
     })
 }
 
@@ -193,6 +212,8 @@ for (let prod of productList){
             const product = getProductInfo(store.get(ctx.chat.id).city,prod)
             if (product){
                 ctx.deleteMessage()
+                //save product to local storage
+                store.add(ctx.chat.id,{product:prod})
                 //get areas
                 const areaButtons = getProductArea(store.get(ctx.chat.id).city,product,ctx)
                 if (areaButtons){
@@ -208,6 +229,32 @@ for (let prod of productList){
         }
     })
 }
+
+/*
+*
+* CITY AREA BIND
+*
+* */
+for (let area of districts){
+    bot.action(area.key,ctx=>{
+        if (!store.get(ctx.chat.id) || typeof store.get(ctx.chat.id).city === 'undefined'){
+            showCityMenu(ctx)
+            return
+        }
+        if (typeof store.get(ctx.chat.id).product === 'undefined' || !store.get(ctx.chat.id).product){
+            showProductMenu(ctx,getMenu(store.get(ctx.chat.id).city))
+            return
+        }
+        //console.log(convertor(1500))
+    })
+}
+
+
+/*
+*
+* PAYMENT ( ͡° ͜ʖ ͡°)
+*
+* */
 
 bot.launch()
 
