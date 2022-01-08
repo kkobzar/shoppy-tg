@@ -44,7 +44,41 @@ function getProductInfo(city = '', product = '') {
     if (!city || !product)
         return false
 
+    let foundProduct = false
+    if (menu.products){
+        for (let cty in menu.products){
+            if(cty === city){
+                for (let prd in menu.products[cty]){
+                    if (product === prd){
+                        foundProduct = menu.products[cty][prd]
+                    }
+                }
+            }
+        }
+    }
 
+    return foundProduct
+}
+//---Get product available areas
+function getProductArea(city = '', product = '',ctx=null){
+    if (!city || !product || ctx === null)
+        return false
+
+    let areasBtn = []
+    //get available areas for product
+    if (product.areas.length && menu.cities[store.get(ctx.chat.id).city]){
+        for (let area of product.areas){
+            let name = menu.cities[store.get(ctx.chat.id).city].districts.find(i=>i.key === area)
+            areasBtn.push([Markup.button.callback(name.title,name.key)])
+        }
+    }
+
+    if (areasBtn.length){
+        areasBtn.push([homeBnt])
+        return areasBtn
+    }else {
+        return false
+    }
 }
 
 /*
@@ -104,6 +138,7 @@ function getMenu(city = '') {
     }
 
     if (productMenuArr.length){
+        productMenuArr.push([homeBnt])
         return productMenuArr
     }else {
         return false
@@ -143,7 +178,6 @@ for (let cty in menu.cities){
         ctx.deleteMessage()
         store(ctx.chat.id,{city:cty})
         if (menu){
-            menu.push([homeBnt])
             ctx.reply('Выбирай:',Markup.inlineKeyboard(menu))
         }else {
             ctx.reply('К сожалению в данном регионе нихуя нэма 😢', Markup.inlineKeyboard([homeBnt]))
@@ -154,27 +188,27 @@ for (let cty in menu.cities){
 //--- Products order bind
 
 for (let prod of productList){
-    console.log(prod)
     bot.action(prod,ctx=>{
         if (store.has(ctx.chat.id) && store.get(ctx.chat.id).city){
-            ctx.deleteMessage()
-            ctx.reply(`User id: ${ctx.chat.id}\nCity: ${store.get(ctx.chat.id).city} \nPay now`)
+            const product = getProductInfo(store.get(ctx.chat.id).city,prod)
+            if (product){
+                ctx.deleteMessage()
+                //get areas
+                const areaButtons = getProductArea(store.get(ctx.chat.id).city,product,ctx)
+                if (areaButtons){
+                    ctx.reply(`User id: ${ctx.chat.id}\nCity: ${store.get(ctx.chat.id).city} \n${product.content?product.content:''}\n`,Markup.inlineKeyboard(areaButtons))
+                }else {
+                    ctx.reply(`User id: ${ctx.chat.id}\nCity: ${store.get(ctx.chat.id).city} \n${product.content?product.content:''}\n`,Markup.inlineKeyboard([homeBnt]))
+                }
+            }
         }else {
-            ctx.sendMessage(ctx.chat.id,'Ой...  Выберите город')
+            ctx.deleteMessage()
+            //ctx.sendMessage(ctx.chat.id,'Ой...  Выберите город')
             showCityMenu(ctx)
         }
     })
 }
 
-bot.action('xtc-1',ctx=>{
-    if (store.has(ctx.chat.id) && store.get(ctx.chat.id).city){
-        ctx.deleteMessage()
-        ctx.reply(`User id: ${ctx.chat.id}\nCity: ${store.get(ctx.chat.id).city} \nPay now`)
-    }else {
-        ctx.sendMessage(ctx.chat.id,'Ой...  Выберите город')
-        showCityMenu(ctx)
-    }
-})
 bot.launch()
 
 // Enable graceful stop
