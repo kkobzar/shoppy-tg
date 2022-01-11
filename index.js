@@ -8,6 +8,7 @@ import 'dotenv/config';
 import store from 'store2'
 import fs from 'fs';
 import convertor from "./convertor.js";
+import rub2btc from "./convertor.js";
 
 if (process.env.BOT_TOKEN === undefined) {
     throw new TypeError('BOT_TOKEN must be provided!')
@@ -16,6 +17,11 @@ if (process.env.BOT_TOKEN === undefined) {
 //---home button
 
 const homeBnt = Markup.button.callback('🏡 Главная', 'main')
+
+//---payment buttons
+
+const payBtn = [[Markup.button.callback('BTC **(Легкий перевод)**','btc-pay')],
+[Markup.button.callback('XLM <b>(Маленькая комиссия)</b>','xlm-pay')]]
 
 //---read menu
 let menu = null
@@ -117,6 +123,7 @@ if (menu.cities){
 const cityMenu = Markup.inlineKeyboard(citiesMenuArr)
 
 function showCityMenu(ctx) {
+    ctx.deleteMessage()
     ctx.reply(`Hello, ${ctx.chat.id}! \nChoose your city:`,cityMenu)
 }
 
@@ -190,7 +197,6 @@ bot.action('delete', (ctx) => ctx.deleteMessage())
 
 //---HOME BUTTON
 bot.action('main', (ctx) => {
-    ctx.deleteMessage()
     store(ctx.chat.id,false)
     showCityMenu(ctx)
 })
@@ -223,7 +229,6 @@ for (let prod of productList){
                 }
             }
         }else {
-            ctx.deleteMessage()
             //ctx.sendMessage(ctx.chat.id,'Ой...  Выберите город')
             showCityMenu(ctx)
         }
@@ -245,7 +250,14 @@ for (let area of districts){
             showProductMenu(ctx,getMenu(store.get(ctx.chat.id).city))
             return
         }
-        //console.log(convertor(1500))
+
+        ctx.deleteMessage()
+        store.add(ctx.chat.id,{area:area.key})
+        let productInfo = getProductInfo(store.get(ctx.chat.id).city,store.get(ctx.chat.id).product)
+        ctx.reply(`Товар: ${productInfo.title}\nГород: ${store.get(ctx.chat.id).city}\nРаён: ${area.key}\nОплата:`,Markup.inlineKeyboard([...payBtn,[homeBnt]]))
+        /*console.log(productInfo)
+        convertor.rub2btc(productInfo.price)
+            .then(res=>console.log(res))*/
     })
 }
 
@@ -255,6 +267,10 @@ for (let area of districts){
 * PAYMENT ( ͡° ͜ʖ ͡°)
 *
 * */
+
+bot.action('btc-pay',ctx=>{
+
+})
 
 bot.launch()
 
